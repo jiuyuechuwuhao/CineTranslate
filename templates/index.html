@@ -7,10 +7,12 @@
        <!-- 搜索区域 -->
         <div class="card mb-4 movie-card">
             <div class="card-body">
-<h4 class="card-title mb-4">
-    <!-- 图片链接已修复为 cinema.png，名字已更新 -->
-    <img src="/static/cinema.png" alt="CineTranslate Icon" style="height: 2.7rem; margin-right: 10px; vertical-align: middle;">
-    <span class="movie-title-text" style="font-weight: bold;">CineTranslate - 影视译名通</span>
+<!-- 修复版：使用 clamp() 智能调节大小，自动适配手机和电脑 -->
+<h4 class="card-title mb-4" style="display: flex; align-items: center;">
+    <img src="/static/cinema.png" alt="Icon" style="height: clamp(1.8rem, 10vw, 2.7rem); margin-right: 10px;">
+    <span class="movie-title-text" style="font-weight: bold; font-size: clamp(1.1rem, 5vw, 1.5rem); white-space: nowrap;">
+        CineTranslate - 影视译名通
+    </span>
 </h4>
                 
                 <!-- 输入方式选择 -->
