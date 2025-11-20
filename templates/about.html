@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}关于 - 影视剧英文名查找工具{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title mb-4"><i class="bi bi-info-circle"></i> 关于本工具</h4>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5><i class="bi bi-gear"></i> 功能特点</h5>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-check-circle text-success"></i> 支持手动输入、批量输入和文件导入</li>
+                            <li><i class="bi bi-check-circle text-success"></i> 基于TMDB和豆瓣双数据库搜索</li>
+                            <li><i class="bi bi-check-circle text-success"></i> 智能推荐最佳匹配结果</li>
+                            <li><i class="bi bi-check-circle text-success"></i> 支持CSV和JSON格式导出</li>
+                            <li><i class="bi bi-check-circle text-success"></i> 现代化Web界面，响应式设计</li>
+                            <li><i class="bi bi-check-circle text-success"></i> 实时搜索进度显示</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h5><i class="bi bi-database"></i> 数据来源</h5>
+                        <div class="mb-3">
+                            <h6><i class="bi bi-film"></i> TMDB (The Movie Database)</h6>
+                            <p class="small text-muted">全球权威的电影数据库，提供最准确的英文影视信息</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <h6><i class="bi bi-star"></i> 豆瓣电影</h6>
+                            <p class="small text-muted">中文影视数据库，涵盖丰富的中文影视资源</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="row">
+                    <div class="col-12">
+                        <h5><i class="bi bi-lightbulb"></i> 使用说明</h5>
+                        <div class="accordion" id="usageAccordion">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#manualUsage">
+                                        手动输入
+                                    </button>
+                                </h2>
+                                <div id="manualUsage" class="accordion-collapse collapse show" data-bs-parent="#usageAccordion">
+                                    <div class="accordion-body">
+                                        在输入框中直接输入影视剧的中文名称，点击搜索按钮即可获得英文名称。
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#batchUsage">
+                                        批量输入
+                                    </button>
+                                </h2>
+                                <div id="batchUsage" class="accordion-collapse collapse" data-bs-parent="#usageAccordion">
+                                    <div class="accordion-body">
+                                        在文本框中每行输入一个影视剧名称，支持一次性搜索多个名称。
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#fileUsage">
+                                        文件导入
+                                    </button>
+                                </h2>
+                                <div id="fileUsage" class="accordion-collapse collapse" data-bs-parent="#usageAccordion">
+                                    <div class="accordion-body">
+                                        选择包含影视剧名称的文本文件（.txt或.csv格式），每行一个名称，系统将自动读取并搜索。
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="row">
+                    <div class="col-12">
+                        <h5><i class="bi bi-code"></i> 技术信息</h5>
+                        <div class="row text-center">
+                            <div class="col-md-3">
+                                <div class="card border-0 bg-light">
+                                    <div class="card-body">
+                                        <i class="bi bi-python text-warning" style="font-size: 2rem;"></i>
+                                        <h6 class="mt-2">Python</h6>
+                                        <small class="text-muted">后端核心</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card border-0 bg-light">
+                                    <div class="card-body">
+                                        <i class="bi bi-flask text-primary" style="font-size: 2rem;"></i>
+                                        <h6 class="mt-2">Flask</h6>
+                                        <small class="text-muted">Web框架</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card border-0 bg-light">
+                                    <div class="card-body">
+                                        <i class="bi bi-bootstrap text-info" style="font-size: 2rem;"></i>
+                                        <h6 class="mt-2">Bootstrap</h6>
+                                        <small class="text-muted">前端界面</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card border-0 bg-light">
+                                    <div class="card-body">
+                                        <i class="bi bi-database text-success" style="font-size: 2rem;"></i>
+                                        <h6 class="mt-2">TMDB/豆瓣</h6>
+                                        <small class="text-muted">数据源</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="text-center">
+                    <p class="text-muted">
+                        <i class="bi bi-heart text-danger"></i> 
+                        本工具旨在帮助用户快速查找中文影视剧的英文名称，方便进行国际交流和信息检索。
+                    </p>
+                    <p class="small text-muted">
+                        版本：v2.0 | 更新时间：2024年
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
