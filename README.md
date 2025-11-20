@@ -2,7 +2,7 @@
 
 > **专业级影视剧英文名查找工具 | The Ultimate Movie Name Translator**
 >
-> 基于 TMDB 和 豆瓣 双平台大数据，专为影视海外传播学者、影视创作者及广大影迷打造的精准译名解决方案。
+> 基于 TMDB 和 豆瓣 双平台大数据，专为中国影视海外传播学者、影视创作者及影迷朋友们打造的精准译名解决方案。
 
 ![Python](https://img.shields.io/badge/Python-3.9+-blue.svg?style=flat-square&logo=python&logoColor=white)
 ![Flask](https://img.shields.io/badge/Framework-Flask-green.svg?style=flat-square&logo=flask&logoColor=white)
@@ -15,12 +15,27 @@
 
 **CineTranslate** 解决了影视工作流中的一个痛点：**如何快速、准确地找到中文影视剧对应的官方英文名称？**
 
-传统的搜索方式往往需要在多个网站之间切换，且结果参差不齐。本工具通过智能算法，同时检索 **TMDB (全球最大影视数据库)** 和 **豆瓣电影**，并自动比对结果，为您推荐最准确的官方英文译名。
+传统的搜索方式往往需要在多个网站之间切换，效率低且结果参差不齐。本工具通过智能算法，同时检索 **TMDB (全球最大影视数据库)** 和 **豆瓣电影**，可以一次识别多个中文影视片目，进行批量化检索并自动比对结果，为您推荐最准确的官方英文译名。
 
 ## 🚀 在线演示 (Demo)
 
 👉 **[点击这里访问 CineTranslate 在线版](https://你的项目域名.vercel.app)**
 *(部署成功后，请将此处链接替换为你自己的 Vercel 域名)*
+
+---
+
+## 📂 项目文件结构 (File Structure)
+
+以下是本项目核心文件的功能说明，帮助开发者快速理解代码架构：
+
+- **`app.py`**Flask 主程序入口，负责启动 Web 服务器、处理 API 请求和页面路由。
+- **`find_english_names.py`**核心搜索引擎，封装了 TMDB 和 豆瓣 的爬虫逻辑与数据匹配算法。
+- **`movie_name_extractor.py`**智能提取模块，用于处理自然语言文本，识别其中的影视剧名称（使用了 Jieba 分词）。
+- **`requirements.txt`**依赖清单（精简版），记录了项目运行所需的 Python 库，适配 Vercel 环境。
+- **`vercel.json`**Vercel 部署配置文件，定义了 Serverless 函数的入口和运行环境。
+- **`templates/`**前端模板文件夹，包含 `index.html` 等网页源码。
+- **`static/`**
+  静态资源文件夹，存放网站图标、CSS 样式等文件。
 
 ---
 
@@ -36,23 +51,13 @@
   - 当官方无结果时，智能回退至豆瓣译名，并标注来源。
 - 📊 **专业数据导出**：
 
-  - 支持 **CSV / Excel**：保留完整元数据（链接、备注），适合表格整理。
-  - 支持 **TXT**：简洁格式，适合直接复制到剪辑软件或笔记中。
+  - 支持 **CSV**：保留完整元数据（链接、备注），适合表格整理。
+  - 支持 **TXT**：简洁格式，适合直接复制到笔记或剪辑软件中。
   - 支持 **JSON**：适合开发者进行二次开发。
 - 🎨 **现代化 UI 设计**：
 
   - 响应式布局，完美适配 手机、平板、PC 桌面。
-  - 支持 🎬 手动输入、📋 智能提取（开发中）、📂 文件导入。
-
----
-
-## 🛠️ 技术栈 (Tech Stack)
-
-- **后端框架**: Python Flask
-- **数据爬虫**: Requests + BeautifulSoup4
-- **中文分词**: Jieba (用于智能提取)
-- **前端界面**: Bootstrap 5 + jQuery
-- **部署架构**: Vercel Serverless Function
+  - 支持 🎬 手动输入、📋 智能提取、📂 文件导入。
 
 ---
 
@@ -74,7 +79,7 @@
 
 ```bash
 # 1. 克隆项目
-git clone https://github.com/你的用户名/CineTranslate.git
+git clone https://github.com/jiuyuechuwuhao/CineTranslate.git
 
 # 2. 进入目录
 cd CineTranslate
