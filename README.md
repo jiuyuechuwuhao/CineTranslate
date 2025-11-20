@@ -2,7 +2,7 @@
 
 > **专业级影视剧英文名查找工具 | The Ultimate Movie Name Translator**
 >
-> 基于 TMDB 和 豆瓣 双平台大数据，专为中国影视海外传播学者、影视创作者及影迷朋友们打造的精准译名解决方案。
+> 基于 TMDB 和 豆瓣 双平台大数据，专为中国影视传播学者、影视创作者及影迷朋友们打造的精准译名解决方案。
 
 ![Python](https://img.shields.io/badge/Python-3.9+-blue.svg?style=flat-square&logo=python&logoColor=white)
 ![Flask](https://img.shields.io/badge/Framework-Flask-green.svg?style=flat-square&logo=flask&logoColor=white)
