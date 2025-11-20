@@ -7,10 +7,14 @@
        <!-- 搜索区域 -->
         <div class="card mb-4 movie-card">
             <div class="card-body">
-<!-- 修复版：使用 clamp() 智能调节大小，自动适配手机和电脑 -->
-<h4 class="card-title mb-4" style="display: flex; align-items: center;">
-    <img src="/static/cinema.png" alt="Icon" style="height: clamp(1.8rem, 10vw, 2.7rem); margin-right: 10px;">
-    <span class="movie-title-text" style="font-weight: bold; font-size: clamp(1.1rem, 5vw, 1.5rem); white-space: nowrap;">
+<!-- 完美适配版：手机端图标在上，电脑端图标在左 -->
+<h4 class="card-title mb-4 d-flex flex-column flex-sm-row align-items-center justify-content-center text-center">
+    <!-- 图标：设置固定大小，清晰锐利 -->
+    <img src="/static/cinema.png" alt="Icon" style="height: 3rem;">
+    
+    <!-- 文字：手机端顶部加间距(mt-2)，电脑端左侧加间距(ms-sm-3) -->
+    <!-- 强制文字颜色为深灰色，避免和背景色冲突 -->
+    <span class="movie-title-text mt-2 mt-sm-0 ms-sm-3" style="font-weight: 800; font-size: 1.3rem; color: #2c3e50; line-height: 1.4;">
         CineTranslate - 影视译名通
     </span>
 </h4>
