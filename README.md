@@ -28,13 +28,13 @@
 
 以下是本项目核心文件的功能说明，帮助开发者快速理解代码架构：
 
-- **`app.py`**Flask 主程序入口，负责启动 Web 服务器、处理 API 请求和页面路由。
-- **`find_english_names.py`**核心搜索引擎，封装了 TMDB 和 豆瓣 的爬虫逻辑与数据匹配算法。
-- **`movie_name_extractor.py`**智能提取模块，用于处理自然语言文本，识别其中的影视剧名称（使用了 Jieba 分词）。
-- **`requirements.txt`**依赖清单（精简版），记录了项目运行所需的 Python 库，适配 Vercel 环境。
-- **`vercel.json`**Vercel 部署配置文件，定义了 Serverless 函数的入口和运行环境。
-- **`templates/`**前端模板文件夹，包含 `index.html` 等网页源码。
-- **`static/`**
+- `app.py`Flask 主程序入口，负责启动 Web 服务器、处理 API 请求和页面路由。
+- `find_english_names.py`核心搜索引擎，封装了 TMDB 和 豆瓣 的爬虫逻辑与数据匹配算法。
+- `movie_name_extractor.py`智能提取模块，用于处理自然语言文本，识别其中的影视剧名称（使用了 Jieba 分词）。
+- `requirements.txt`依赖清单（精简版），记录了项目运行所需的 Python 库，适配 Vercel 环境。
+- `vercel.json`Vercel 部署配置文件，定义了 Serverless 函数的入口和运行环境。
+- `templates/`前端模板文件夹，包含 `index.html` 等网页源码。
+- `static/`
   静态资源文件夹，存放网站图标、CSS 样式等文件。
 
 ---
