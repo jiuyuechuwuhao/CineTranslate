@@ -19,8 +19,8 @@
 
 ## 🚀 在线演示 (Demo)
 
-👉 **[点击这里访问 CineTranslate 在线版](https://你的项目域名.vercel.app)**
-*(部署成功后，请将此处链接替换为你自己的 Vercel 域名)*
+👉 **[点击这里访问 CineTranslate 在线版](https://cine-translate.vercel.app/)**
+
 
 ---
 
