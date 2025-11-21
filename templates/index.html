@@ -666,18 +666,134 @@ function extractNames() {
 }
 
 // 批量搜索
-function searchBatch() {
+async function searchBatch() {
     const batchText = document.getElementById('batchMovies').value.trim();
     if (!batchText) {
         alert('请输入至少一个影视剧名称');
         return;
     }
-    const movies = batchText.split('\n').filter(name => name.trim());
+    
+    // 处理输入：按换行符分割，去除空行
+    const movies = batchText.split(/[\n,]+/).map(m => m.trim()).filter(m => m);
+    
     if (movies.length === 0) {
         alert('请输入有效的影视剧名称');
         return;
     }
-    performSearch(movies);
+
+    // 初始化界面
+    showLoading();
+    const progressBar = document.getElementById('searchProgress');
+    const progressText = document.getElementById('progressText');
+    const resultsContainer = document.getElementById('resultsContainer');
+    
+    // 清空之前的结果，准备追加新结果
+    currentResults = []; 
+    resultsContainer.innerHTML = ''; 
+    let successCount = 0;
+    let totalProcessed = 0;
+
+    // 停止模拟进度条（我们要用真实的进度）
+    if (window.progressInterval) clearInterval(window.progressInterval);
+    
+    // === 核心修改：一个个轮流查，防止超时 ===
+    for (const movieName of movies) {
+        // 更新进度文字
+        progressText.textContent = `正在搜索: ${movieName} (${totalProcessed + 1}/${movies.length})`;
+        
+        try {
+            // 每次只发这一个名字给服务器
+            const response = await fetch('/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ movies: [movieName] }) // 发送单元素数组
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.results && data.results.length > 0) {
+                const result = data.results[0];
+                currentResults.push(result);
+                
+                // 立即把这个结果画到页面上（不用等全部查完）
+                appendSingleResult(result);
+                
+                if (result.tmdb || result.douban) successCount++;
+            }
+        } catch (error) {
+            console.error(`搜索 ${movieName} 失败:`, error);
+            // 即使失败也继续查下一个
+        }
+
+        // 更新真实进度条
+        totalProcessed++;
+        const percent = Math.round((totalProcessed / movies.length) * 100);
+        progressBar.style.width = percent + '%';
+        
+        // 稍微休息一下，避免请求太快（可选）
+        await new Promise(r => setTimeout(r, 500));
+    }
+
+    // 全部完成
+    hideLoading();
+    
+    // 更新最终统计
+    const stats = {
+        total: movies.length,
+        found_any: successCount
+    };
+    showStatistics(stats);
+}
+
+// 新增辅助函数：向页面追加单个结果
+function appendSingleResult(result) {
+    const container = document.getElementById('resultsContainer');
+    const movieItem = document.createElement('div');
+    movieItem.className = 'movie-item';
+    
+    // 复用之前的卡片生成逻辑 (简化版，直接拼接HTML)
+    let html = `<div class="movie-title">${result.chinese_name}</div>`;
+    
+    // TMDB部分
+    if (result.tmdb) {
+        html += `
+            <div class="result-source source-tmdb">
+                <h6><span class="source-icon"></span>TMDB</h6>
+                <div><strong>英文名称：</strong>${result.tmdb.title}</div>
+                <div><strong>链接：</strong><a href="${result.tmdb.link}" target="_blank" class="text-decoration-none">查看链接</a></div>
+            </div>`;
+    } else {
+        html += `<div class="result-source source-tmdb"><h6>TMDB</h6><div>未找到</div></div>`;
+    }
+    
+    // 豆瓣部分
+    if (result.douban) {
+        const title = result.douban.has_english ? result.douban.title : '无 (仅中文)';
+        html += `
+            <div class="result-source source-douban">
+                <h6><span class="source-icon"></span>豆瓣</h6>
+                <div><strong>英文名称：</strong>${title}</div>
+                <div><strong>链接：</strong><a href="${result.douban.link}" target="_blank" class="text-decoration-none">查看链接</a></div>
+            </div>`;
+    } else {
+        html += `<div class="result-source source-douban"><h6>豆瓣</h6><div>未找到</div></div>`;
+    }
+    
+    // 最佳推荐逻辑
+    let bestMatch = '未找到';
+    if (result.tmdb) bestMatch = result.tmdb.title;
+    else if (result.douban && result.douban.has_english) bestMatch = result.douban.title;
+    
+    if (bestMatch !== '未找到') {
+        html += `
+            <div class="best-result">
+                <div class="best-match-title">⭐ 推荐结果</div>
+                <div class="best-match-source">${bestMatch}</div>
+            </div>`;
+    }
+    
+    movieItem.innerHTML = html;
+    container.appendChild(movieItem);
 }
 
 // 文件搜索
