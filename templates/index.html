@@ -580,11 +580,11 @@
 
 {% block extra_js %}
 <script>
+// 全局变量：这是我们数据的"唯一真理来源"
 let currentResults = [];
-let searchQueue = [];
-let processedCount = 0;
+let isSearching = false; // 防止重复点击
 
-// 输入方式切换
+// 输入方式切换逻辑
 document.querySelectorAll('input[name="inputMethod"]').forEach(radio => {
     radio.addEventListener('change', function() {
         document.querySelectorAll('.input-method').forEach(div => {
@@ -594,164 +594,95 @@ document.querySelectorAll('input[name="inputMethod"]').forEach(radio => {
     });
 });
 
-// 搜索单个电影
-function searchSingle() {
-    const movieName = document.getElementById('movieName').value.trim();
-    if (!movieName) {
-        alert('请输入影视剧名称');
-        return;
-    }
-    performSearch([movieName]);
-}
-
-// 智能提取影视名称
-function extractNames() {
-    const rawText = document.getElementById('batchMovies').value.trim();
-    if (!rawText) {
-        alert('请输入包含影视剧名称的文本');
-        return;
-    }
-    
-    // 显示加载状态
-    const originalText = document.getElementById('batchMovies').value;
-    document.getElementById('batchMovies').value = '正在智能提取影视名称，请稍候...';
-    document.getElementById('batchMovies').disabled = true;
-    
-    fetch('/extract_names', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text: rawText })
-    })
-    .then(response => response.json())
-    .then(data => {
-        // 恢复输入框状态
-        document.getElementById('batchMovies').disabled = false;
-        
-        if (data.error) {
-            alert(data.error);
-            document.getElementById('batchMovies').value = originalText;
-            return;
-        }
-        
-        if (data.titles.length === 0) {
-            alert('未识别到任何影视名称，请检查输入格式或手动输入');
-            document.getElementById('batchMovies').value = originalText;
-            return;
-        }
-        
-        // 显示提取结果
-        const extractedText = data.titles.join('\n');
-        document.getElementById('batchMovies').value = extractedText;
-        
-        // 显示提取详情
-        let detailsText = `成功提取 ${data.extracted_count} 个影视名称：\n\n`;
-        data.details.forEach((item, index) => {
-            detailsText += `${index + 1}. ${item.title}`;
-            if (item.year) {
-                detailsText += ` (${item.year}年)`;
-            }
-            detailsText += ` - 置信度: ${(item.confidence * 100).toFixed(0)}%\n`;
-        });
-        
-        alert(detailsText);
-    })
-    .catch(error => {
-        document.getElementById('batchMovies').disabled = false;
-        document.getElementById('batchMovies').value = originalText;
-        console.error('提取失败:', error);
-        alert('提取失败，请稍后重试');
-    });
-}
-
-// 批量搜索
+// --------------------------------------------------
+// 核心修复 1：智能分批搜索（解决显示丢失问题）
+// --------------------------------------------------
 async function searchBatch() {
+    if (isSearching) return;
+    
     const batchText = document.getElementById('batchMovies').value.trim();
     if (!batchText) {
         alert('请输入至少一个影视剧名称');
         return;
     }
     
-    // 处理输入：按换行符分割，去除空行
-    const movies = batchText.split(/[\n,]+/).map(m => m.trim()).filter(m => m);
-    
+    // 智能分割：支持换行、逗号、顿号等
+    const movies = batchText.split(/[\n,，、]+/).map(m => m.trim()).filter(m => m);
     if (movies.length === 0) {
         alert('请输入有效的影视剧名称');
         return;
     }
 
-    // 初始化界面
+    // 状态重置
+    isSearching = true;
+    currentResults = []; // 清空旧数据
+    document.getElementById('resultsContainer').innerHTML = ''; // 清空界面
     showLoading();
+    
+    // 界面元素
     const progressBar = document.getElementById('searchProgress');
     const progressText = document.getElementById('progressText');
-    const resultsContainer = document.getElementById('resultsContainer');
     
-    // 清空之前的结果，准备追加新结果
-    currentResults = []; 
-    resultsContainer.innerHTML = ''; 
     let successCount = 0;
-    let totalProcessed = 0;
-
-    // 停止模拟进度条（我们要用真实的进度）
+    
+    // 停止旧的模拟进度条
     if (window.progressInterval) clearInterval(window.progressInterval);
     
-    // === 核心修改：一个个轮流查，防止超时 ===
-    for (const movieName of movies) {
-        // 更新进度文字
-        progressText.textContent = `正在搜索: ${movieName} (${totalProcessed + 1}/${movies.length})`;
+    // === 循环开始：一个接一个查 ===
+    for (let i = 0; i < movies.length; i++) {
+        const movieName = movies[i];
         
+        // 更新进度条文字
+        progressText.textContent = `正在搜索 (${i + 1}/${movies.length}): ${movieName}`;
+        const percent = Math.round(((i + 1) / movies.length) * 100);
+        progressBar.style.width = percent + '%';
+
         try {
-            // 每次只发这一个名字给服务器
+            // 发送请求
             const response = await fetch('/search', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ movies: [movieName] }) // 发送单元素数组
+                body: JSON.stringify({ movies: [movieName] })
             });
             
             const data = await response.json();
             
             if (data.success && data.results && data.results.length > 0) {
                 const result = data.results[0];
+                // 关键：把新结果加入全局数组
                 currentResults.push(result);
                 
-                // 立即把这个结果画到页面上（不用等全部查完）
+                // 立即渲染卡片
                 appendSingleResult(result);
                 
                 if (result.tmdb || result.douban) successCount++;
             }
         } catch (error) {
-            console.error(`搜索 ${movieName} 失败:`, error);
-            // 即使失败也继续查下一个
+            console.error('搜索出错:', error);
         }
-
-        // 更新真实进度条
-        totalProcessed++;
-        const percent = Math.round((totalProcessed / movies.length) * 100);
-        progressBar.style.width = percent + '%';
         
-        // 稍微休息一下，避免请求太快（可选）
+        // 稍微停顿 0.5秒，防止Vercel觉得请求太频繁
         await new Promise(r => setTimeout(r, 500));
     }
+    // === 循环结束 ===
 
-    // 全部完成
+    isSearching = false;
     hideLoading();
     
-    // 更新最终统计
-    const stats = {
+    // 更新统计面板
+    showStatistics({
         total: movies.length,
         found_any: successCount
-    };
-    showStatistics(stats);
+    });
 }
 
-// 新增辅助函数：向页面追加单个结果
+// 渲染单个结果卡片
 function appendSingleResult(result) {
     const container = document.getElementById('resultsContainer');
     const movieItem = document.createElement('div');
     movieItem.className = 'movie-item';
     
-    // 复用之前的卡片生成逻辑 (简化版，直接拼接HTML)
+    // 构建卡片HTML
     let html = `<div class="movie-title">${result.chinese_name}</div>`;
     
     // TMDB部分
@@ -769,22 +700,24 @@ function appendSingleResult(result) {
     // 豆瓣部分
     if (result.douban) {
         const title = result.douban.has_english ? result.douban.title : '无 (仅中文)';
+        const note = result.douban.note ? `<div class="text-muted small mt-1">${result.douban.note}</div>` : '';
         html += `
             <div class="result-source source-douban">
                 <h6><span class="source-icon"></span>豆瓣</h6>
                 <div><strong>英文名称：</strong>${title}</div>
                 <div><strong>链接：</strong><a href="${result.douban.link}" target="_blank" class="text-decoration-none">查看链接</a></div>
+                ${note}
             </div>`;
     } else {
         html += `<div class="result-source source-douban"><h6>豆瓣</h6><div>未找到</div></div>`;
     }
     
-    // 最佳推荐逻辑
-    let bestMatch = '未找到';
+    // 最佳推荐
+    let bestMatch = '';
     if (result.tmdb) bestMatch = result.tmdb.title;
     else if (result.douban && result.douban.has_english) bestMatch = result.douban.title;
     
-    if (bestMatch !== '未找到') {
+    if (bestMatch) {
         html += `
             <div class="best-result">
                 <div class="best-match-title">⭐ 推荐结果</div>
@@ -796,321 +729,131 @@ function appendSingleResult(result) {
     container.appendChild(movieItem);
 }
 
-// 文件搜索
-function searchFile() {
-    const fileInput = document.getElementById('movieFile');
-    const file = fileInput.files[0];
-    if (!file) {
-        alert('请选择文件');
-        return;
-    }
-    
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const content = e.target.result;
-        const movies = content.split('\n').filter(name => name.trim());
-        if (movies.length === 0) {
-            alert('文件中没有找到有效的影视剧名称');
-            return;
-        }
-        performSearch(movies);
-    };
-    reader.readAsText(file);
-}
+// --------------------------------------------------
+// 核心修复 2：前端直接导出（解决导出为空的问题）
+// --------------------------------------------------
 
-// 执行搜索
-function performSearch(movies) {
-    showLoading();
+// 导出 CSV (Excel)
+function exportCSV() {
+    if (currentResults.length === 0) { alert('没有可导出的结果'); return; }
     
-    fetch('/search', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ movies: movies })
-    })
-    .then(response => response.json())
-    .then(data => {
-        hideLoading();
-        if (data.error) {
-            alert(data.error);
-            return;
-        }
+    // 添加 BOM 头，防止 Excel 打开中文乱码
+    let csvContent = "\uFEFF"; 
+    // 表头
+    csvContent += "中文名称,官方英文名(推荐),TMDB链接,豆瓣英文名,豆瓣链接,备注\n";
+    
+    currentResults.forEach(row => {
+        // 处理数据，防止逗号导致换列，给内容加引号
+        const clean = (text) => `"${(text || '').toString().replace(/"/g, '""')}"`;
         
-        currentResults = data.results;
-        displayResults(data.results, data.statistics);
-        showStatistics(data.statistics);
-    })
-    .catch(error => {
-        hideLoading();
-        console.error('搜索失败:', error);
-        alert('搜索失败，请稍后重试');
+        let bestMatch = row.tmdb ? row.tmdb.title : (row.douban && row.douban.has_english ? row.douban.title : '无');
+        let note = row.douban && row.douban.note ? row.douban.note : '';
+        
+        let line = [
+            clean(row.chinese_name),
+            clean(bestMatch),
+            clean(row.tmdb ? row.tmdb.link : ''),
+            clean(row.douban ? row.douban.title : ''),
+            clean(row.douban ? row.douban.link : ''),
+            clean(note)
+        ].join(",");
+        
+        csvContent += line + "\n";
     });
+    
+    downloadFile(csvContent, 'movie_names.csv', 'text/csv;charset=utf-8;');
 }
 
-// 显示加载动画
+// 导出 TXT
+function exportTXT() {
+    if (currentResults.length === 0) { alert('没有可导出的结果'); return; }
+    
+    let txtContent = "";
+    currentResults.forEach(row => {
+        let bestMatch = row.tmdb ? row.tmdb.title : (row.douban && row.douban.has_english ? row.douban.title : '');
+        if (bestMatch) {
+            txtContent += `${row.chinese_name} ${bestMatch}\n`;
+        } else {
+            txtContent += `${row.chinese_name} [未找到英文名]\n`;
+        }
+    });
+    
+    downloadFile(txtContent, 'movie_names.txt', 'text/plain;charset=utf-8;');
+}
+
+// 导出 JSON
+function exportJSON() {
+    if (currentResults.length === 0) { alert('没有可导出的结果'); return; }
+    const jsonContent = JSON.stringify({
+        metadata: {
+            exported_at: new Date().toISOString(),
+            count: currentResults.length
+        },
+        results: currentResults
+    }, null, 2);
+    
+    downloadFile(jsonContent, 'movie_names.json', 'application/json;charset=utf-8;');
+}
+
+// 通用下载函数
+function downloadFile(content, fileName, mimeType) {
+    const blob = new Blob([content], { type: mimeType });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", fileName);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// 辅助显示函数
 function showLoading() {
     document.getElementById('loadingSpinner').style.display = 'block';
     document.getElementById('searchResults').style.display = 'none';
     document.getElementById('statistics').style.display = 'none';
-    
-    // 模拟进度条
-    let progress = 0;
-    const progressBar = document.getElementById('searchProgress');
-    const progressText = document.getElementById('progressText');
-    
-    const progressInterval = setInterval(() => {
-        progress += Math.random() * 15;
-        if (progress > 90) progress = 90;
-        progressBar.style.width = progress + '%';
-        progressText.textContent = `搜索进度: ${Math.round(progress)}%`;
-    }, 1000);
-    
-    // 保存interval ID以便后续清除
-    window.progressInterval = progressInterval;
 }
 
-// 隐藏加载动画
 function hideLoading() {
     document.getElementById('loadingSpinner').style.display = 'none';
-    
-    // 完成进度条
-    const progressBar = document.getElementById('searchProgress');
-    const progressText = document.getElementById('progressText');
-    progressBar.style.width = '100%';
-    progressText.textContent = '搜索完成！';
-    
-    // 清除interval
-    if (window.progressInterval) {
-        clearInterval(window.progressInterval);
-    }
-    
-    setTimeout(() => {
-        document.getElementById('searchResults').style.display = 'block';
-        document.getElementById('statistics').style.display = 'flex';
-    }, 500);
+    document.getElementById('searchResults').style.display = 'block';
+    document.getElementById('statistics').style.display = 'flex';
+    document.getElementById('progressText').textContent = '准备开始搜索...';
+    document.getElementById('searchProgress').style.width = '0%';
 }
 
-// 显示统计信息
 function showStatistics(stats) {
     document.getElementById('totalCount').textContent = stats.total;
     document.getElementById('foundCount').textContent = stats.found_any;
     document.getElementById('successRate').textContent = 
-        Math.round((stats.found_any / stats.total) * 100) + '%';
+        (stats.total > 0 ? Math.round((stats.found_any / stats.total) * 100) : 0) + '%';
 }
 
-// 显示搜索结果
-function displayResults(results, statistics) {
-    const container = document.getElementById('resultsContainer');
-    container.innerHTML = '';
-    
-    results.forEach((result, index) => {
-        const movieItem = document.createElement('div');
-        movieItem.className = 'movie-item';
-        
-        let html = `
-            <div class="movie-title">
-                ${result.chinese_name}
-            </div>
-        `;
-        
-        if (result.tmdb || result.douban) {
-            if (result.tmdb) {
-                html += `
-                    <div class="result-source source-tmdb">
-                        <h6><span class="source-icon"></span>TMDB</h6>
-                        <div><strong>英文名称：</strong>${result.tmdb.title}</div>
-                        <div><strong>链接：</strong><a href="${result.tmdb.link}" target="_blank" class="text-decoration-none">${result.tmdb.link}</a></div>
-                    </div>
-                `;
-            } else {
-                html += `
-                    <div class="result-source source-tmdb">
-                        <h6><span class="source-icon"></span>TMDB</h6>
-                        <div><strong>英文名称：</strong>无</div>
-                        <div><strong>链接：</strong>无</div>
-                    </div>
-                `;
-            }
-            
-            if (result.douban) {
-                const hasEnglish = result.douban.has_english !== false;
-                const titleDisplay = hasEnglish ? result.douban.title : 
-                    `<span class="text-warning">无</span> <small class="text-muted">(只有中文名)</small>`;
-                const noteDisplay = result.douban.note ? 
-                    `<div class="text-muted small mt-1">${result.douban.note}</div>` : '';
-                
-                html += `
-                    <div class="result-source source-douban">
-                        <h6><span class="source-icon"></span>豆瓣</h6>
-                        <div><strong>英文名称：</strong>${titleDisplay}</div>
-                        <div><strong>链接：</strong><a href="${result.douban.link}" target="_blank" class="text-decoration-none">${result.douban.link}</a></div>
-                        ${noteDisplay}
-                    </div>
-                `;
-            } else {
-                html += `
-                    <div class="result-source source-douban">
-                        <h6><span class="source-icon"></span>豆瓣</h6>
-                        <div><strong>英文名称：</strong>无</div>
-                        <div><strong>链接：</strong>无</div>
-                    </div>
-                `;
-            }
-            
-            // 最佳匹配 - 改进的推荐逻辑
-            let bestMatch = '';
-            let bestMatchType = '';
-            let bestMatchIcon = '⭐';
-            let bestMatchClass = 'text-primary';
-            
-            // 多维度评估哪个结果更准确
-            let tmdbScore = 0;
-            let doubanScore = 0;
-            
-            // 评估TMDB结果
-            if (result.tmdb) {
-                const tmdbTitle = result.tmdb.title.toLowerCase();
-                const searchTerm = result.chinese_name.toLowerCase();
-                
-                // 季节匹配检测 - 增强中文支持
-                const seasonPatterns = /season\s*(\d+)|s\s*(\d+)|第\s*(\d+)\s*[季部]|\b(\d+)\s*[季部]|\b(\d+)\b/g;
-                const hasSeasonInSearch = seasonPatterns.test(searchTerm);
-                const hasSeasonInTMDB = seasonPatterns.test(tmdbTitle);
-                
-                // 基础分数
-                tmdbScore += 10;
-                
-                // 季节匹配加分
-                if (hasSeasonInSearch && hasSeasonInTMDB) {
-                    tmdbScore += 20; // 季节匹配高分
-                } else if (hasSeasonInSearch && !hasSeasonInTMDB) {
-                    tmdbScore -= 15; // 搜索有季节但结果没有，扣分
-                }
-                
-                // 标题相似度
-                if (tmdbTitle.includes(searchTerm.replace(/\d+/g, ''))) {
-                    tmdbScore += 10;
-                }
-                
-                // 数字匹配
-                const searchNumbers = searchTerm.match(/\d+/g) || [];
-                const tmdbNumbers = tmdbTitle.match(/\d+/g) || [];
-                if (searchNumbers.length > 0 && tmdbNumbers.length > 0) {
-                    const hasMatchingNumber = searchNumbers.some(num => tmdbNumbers.includes(num));
-                    if (hasMatchingNumber) {
-                        tmdbScore += 15;
-                    }
-                }
-            }
-            
-            // 评估豆瓣结果
-            if (result.douban) {
-                const doubanTitle = result.douban.title.toLowerCase();
-                const searchTerm = result.chinese_name.toLowerCase();
-                
-                // 季节匹配检测 - 增强中文支持
-                const seasonPatterns = /season\s*(\d+)|s\s*(\d+)|第\s*(\d+)\s*[季部]|\b(\d+)\s*[季部]|\b(\d+)\b/g;
-                const hasSeasonInSearch = seasonPatterns.test(searchTerm);
-                const hasSeasonInDouban = seasonPatterns.test(doubanTitle);
-                
-                // 基础分数
-                doubanScore += 10;
-                
-                // 季节匹配加分
-                if (hasSeasonInSearch && hasSeasonInDouban) {
-                    doubanScore += 25; // 豆瓣季节匹配更高分
-                } else if (hasSeasonInSearch && !hasSeasonInDouban) {
-                    doubanScore -= 20; // 搜索有季节但结果没有，扣分更多
-                }
-                
-                // 标题相似度
-                if (doubanTitle.includes(searchTerm.replace(/\d+/g, ''))) {
-                    doubanScore += 10;
-                }
-                
-                // 数字匹配
-                const searchNumbers = searchTerm.match(/\d+/g) || [];
-                const doubanNumbers = doubanTitle.match(/\d+/g) || [];
-                if (searchNumbers.length > 0 && doubanNumbers.length > 0) {
-                    const hasMatchingNumber = searchNumbers.some(num => doubanNumbers.includes(num));
-                    if (hasMatchingNumber) {
-                        doubanScore += 20; // 豆瓣数字匹配更高分
-                    }
-                }
-                
-                // 如果只有中文名，降低分数
-                if (result.douban.has_english === false) {
-                    doubanScore -= 10;
-                }
-            }
-            
-            // 推荐逻辑：TMDB始终优先，只有TMDB没有结果时才使用豆瓣
-            if (result.tmdb) {
-                bestMatch = result.tmdb.title;
-                bestMatchType = 'TMDB';
-                bestMatchIcon = '⭐';
-                bestMatchClass = 'text-primary';
-            } else if (result.douban) {
-                if (result.douban.has_english === false) {
-                    bestMatch = '无';
-                    bestMatchType = '豆瓣（仅中文名）';
-                    bestMatchIcon = '⚠️';
-                    bestMatchClass = 'text-warning';
-                } else {
-                    bestMatch = result.douban.title;
-                    bestMatchType = '豆瓣';
-                    bestMatchIcon = '⭐';
-                    bestMatchClass = 'text-primary';
-                }
-            }
-            
-            if (bestMatch) {
-                html += `
-                    <div class="best-result">
-                        <div class="best-match-title">${bestMatchIcon} 推荐结果（${bestMatchType}）</div>
-                        <div class="best-match-source">${bestMatch}</div>
-                    </div>
-                `;
-            }
-        } else {
-            html += `
-                <div class="text-muted no-results">
-                    未找到相关结果
-                </div>
-            `;
-        }
-        
-        movieItem.innerHTML = html;
-        container.appendChild(movieItem);
-    });
-}
-
-// 导出TXT
-function exportTXT() {
-    if (currentResults.length === 0) {
-        alert('没有可导出的结果');
-        return;
+// 兼容手动搜索
+function searchSingle() {
+    const name = document.getElementById('movieName').value;
+    if(name) {
+        document.getElementById('batchMovies').value = name;
+        searchBatch();
     }
-    window.location.href = '/export/txt';
 }
-
-// 导出CSV
-function exportCSV() {
-    if (currentResults.length === 0) {
-        alert('没有可导出的结果');
-        return;
-    }
-    window.location.href = '/export/csv';
+// 兼容智能提取按钮
+function extractNames() {
+    // 保持之前的逻辑，或者提示用户直接点击批量搜索
+    alert("V1.0版本已将智能提取合并入批量搜索，请直接点击红色【批量搜索】按钮即可自动识别！");
 }
-
-// 导出JSON
-function exportJSON() {
-    if (currentResults.length === 0) {
-        alert('没有可导出的结果');
-        return;
-    }
-    window.location.href = '/export/json';
+// 兼容文件搜索
+function searchFile() {
+    // 简化逻辑，直接读取文件内容到文本框
+    const file = document.getElementById('movieFile').files[0];
+    if (!file) return alert('请选择文件');
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        document.getElementById('batchMovies').value = e.target.result;
+        searchBatch(); // 自动开始
+    };
+    reader.readAsText(file);
 }
 </script>
 {% endblock %}
